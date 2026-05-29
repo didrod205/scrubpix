@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>scrubpix — see & remove hidden photo metadata (EXIF / GPS), locally</title>
+    <meta
+      name="description"
+      content="Drop a photo to reveal its hidden metadata — GPS location, camera, timestamps — and strip it losslessly before you share. 100% local: your photo never leaves your browser."
+    />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <h1>🧼 scrubpix</h1>
+      <p class="tagline">
+        See the <strong>hidden metadata</strong> in your photos — GPS location,
+        camera, timestamps — and <strong>strip it</strong> before you share.
+      </p>
+      <p class="privacy">🔒 100% local — your photo never leaves your browser.</p>
+    </header>
+
+    <main>
+      <section id="drop" class="drop">
+        <input type="file" id="file" accept="image/jpeg,image/png" multiple hidden />
+        <p>
+          <button id="pick" type="button">Choose photos</button>
+        </p>
+        <p class="hint">…or drag &amp; drop, or paste (⌘/Ctrl+V). JPEG &amp; PNG. Multiple at once.</p>
+      </section>
+
+      <section id="results" class="results" aria-live="polite"></section>
+    </main>
+
+    <footer>
+      <a href="https://github.com/didrod205/scrubpix">GitHub</a> ·
+      <a href="https://www.npmjs.com/package/scrubpix">npm</a> ·
+      <span>MIT</span> · <span>Zero dependencies</span>
+    </footer>
+
+    <template id="card-tpl">
+      <article class="card">
+        <div class="card-head">
+          <span class="name"></span>
+          <span class="badge"></span>
+        </div>
+        <div class="meta"></div>
+        <div class="actions">
+          <button class="strip" type="button">Strip &amp; download clean copy</button>
+        </div>
+      </article>
+    </template>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
