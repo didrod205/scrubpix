@@ -25,6 +25,8 @@ async function handleFile(file: File): Promise<void> {
   const card = node.querySelector(".card") as HTMLElement;
   (card.querySelector(".name") as HTMLElement).textContent = file.name;
 
+  const readOnly = meta.hasMetadata && !meta.canStrip;
+
   const badge = card.querySelector(".badge") as HTMLElement;
   if (meta.format === "unknown") {
     badge.textContent = "unsupported";
@@ -50,16 +52,23 @@ async function handleFile(file: File): Promise<void> {
       link.textContent = `📍 This photo reveals a location — open in map (${latitude}, ${longitude})`;
       metaEl.prepend(link);
     }
+    if (readOnly) {
+      const note = document.createElement("p");
+      note.className = "readonly-note";
+      note.textContent =
+        "ℹ️ HEIC is read-only here: scrubpix reveals the metadata but can't rewrite the file safely. Convert to JPEG to strip it.";
+      metaEl.append(note);
+    }
   } else if (meta.format !== "unknown") {
     metaEl.innerHTML = `<p class="clean">This image has no removable metadata. 🎉</p>`;
   } else {
-    metaEl.innerHTML = `<p class="clean">Only JPEG, PNG and WebP are supported.</p>`;
+    metaEl.innerHTML = `<p class="clean">Only JPEG, PNG, WebP and HEIC are supported.</p>`;
   }
 
   const stripBtn = card.querySelector(".strip") as HTMLButtonElement;
-  if (meta.format === "unknown" || !meta.hasMetadata) {
+  if (meta.format === "unknown" || !meta.hasMetadata || readOnly) {
     stripBtn.disabled = true;
-    stripBtn.textContent = meta.hasMetadata ? "Strip" : "Already clean";
+    stripBtn.textContent = readOnly ? "Read-only (HEIC)" : meta.hasMetadata ? "Strip" : "Already clean";
   }
   stripBtn.addEventListener("click", () => {
     const { data, bytesRemoved } = stripMetadata(buf);
@@ -77,12 +86,12 @@ async function handleFile(file: File): Promise<void> {
   results.prepend(card);
 }
 
-const SUPPORTED = new Set(["image/jpeg", "image/png", "image/webp"]);
+const SUPPORTED = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
 function handleFiles(files: FileList | File[]): void {
   for (const f of Array.from(files)) {
     // Fall back to extension sniffing when the browser doesn't set a type.
-    const ok = SUPPORTED.has(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name);
+    const ok = SUPPORTED.has(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name);
     if (ok) void handleFile(f);
   }
 }

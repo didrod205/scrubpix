@@ -9,6 +9,7 @@
 import { isJpeg, readJpeg, stripJpeg } from "./jpeg.js";
 import { isPng, readPng, stripPng } from "./png.js";
 import { isWebp, readWebp, stripWebp } from "./webp.js";
+import { isHeic, readHeic } from "./heic.js";
 import type { ImageFormat, Metadata, StripResult } from "./types.js";
 
 export type {
@@ -24,7 +25,16 @@ export type {
 export { isJpeg, readJpeg, stripJpeg } from "./jpeg.js";
 export { isPng, readPng, stripPng } from "./png.js";
 export { isWebp, readWebp, stripWebp } from "./webp.js";
+export { isHeic, readHeic } from "./heic.js";
 export { parseTiff } from "./tiff.js";
+
+/** Formats whose metadata scrubpix can losslessly remove. HEIC is read-only. */
+const STRIPPABLE = new Set<ImageFormat>(["jpeg", "png", "webp"]);
+
+/** Can scrubpix losslessly strip metadata from this format? */
+export function canStrip(format: ImageFormat): boolean {
+  return STRIPPABLE.has(format);
+}
 
 function toBytes(input: Uint8Array | ArrayBuffer): Uint8Array {
   return input instanceof Uint8Array ? input : new Uint8Array(input);
@@ -36,6 +46,7 @@ export function detectFormat(input: Uint8Array | ArrayBuffer): ImageFormat {
   if (isJpeg(b)) return "jpeg";
   if (isPng(b)) return "png";
   if (isWebp(b)) return "webp";
+  if (isHeic(b)) return "heic";
   return "unknown";
 }
 
@@ -58,8 +69,10 @@ export function readMetadata(input: Uint8Array | ArrayBuffer): Metadata {
         ? readPng(b)
         : format === "webp"
           ? readWebp(b)
-          : { fields: [], gps: undefined };
-  return { format, hasMetadata: fields.length > 0, fields, gps };
+          : format === "heic"
+            ? readHeic(b)
+            : { fields: [], gps: undefined };
+  return { format, hasMetadata: fields.length > 0, fields, gps, canStrip: canStrip(format) };
 }
 
 /**
@@ -74,15 +87,13 @@ export function readMetadata(input: Uint8Array | ArrayBuffer): Metadata {
 export function stripMetadata(input: Uint8Array | ArrayBuffer): StripResult {
   const b = toBytes(input);
   const format = detectFormat(b);
+  if (!canStrip(format)) {
+    // Read-only formats (HEIC) or unknown: return the bytes unchanged.
+    return { data: b.slice(), format, bytesRemoved: 0, stripped: false };
+  }
   const data =
-    format === "jpeg"
-      ? stripJpeg(b)
-      : format === "png"
-        ? stripPng(b)
-        : format === "webp"
-          ? stripWebp(b)
-          : b.slice();
-  return { data, format, bytesRemoved: b.length - data.length };
+    format === "jpeg" ? stripJpeg(b) : format === "png" ? stripPng(b) : stripWebp(b);
+  return { data, format, bytesRemoved: b.length - data.length, stripped: true };
 }
 
 /** Convenience: does this image carry any removable metadata? */

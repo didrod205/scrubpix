@@ -18,9 +18,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { basename, dirname, extname, join, resolve } from "node:path";
-import { detectFormat, readMetadata, stripMetadata } from "./index.js";
+import { canStrip, detectFormat, readMetadata, stripMetadata } from "./index.js";
 
-const IMAGE_EXT = /\.(jpe?g|png|webp)$/i;
+const IMAGE_EXT = /\.(jpe?g|png|webp|heic|heif)$/i;
 
 interface Options {
   command: "scan" | "strip" | "help" | "version";
@@ -164,10 +164,26 @@ function destFor(file: string, opts: Options): string {
 function runStrip(files: string[], opts: Options): number {
   let cleaned = 0;
   let totalRemoved = 0;
+  let skipped = 0;
   for (const file of files) {
     const bytes = readFileSync(file);
-    if (detectFormat(bytes) === "unknown") {
+    const format = detectFormat(bytes);
+    if (format === "unknown") {
       if (!opts.quiet) console.log(`${c.dim("•")} ${relish(file)} ${c.dim("(unsupported)")}`);
+      continue;
+    }
+    if (!canStrip(format)) {
+      // Read-only format (HEIC). Warn if it carries metadata; never rewrite it.
+      const meta = readMetadata(bytes);
+      if (meta.hasMetadata) {
+        skipped++;
+        const gps = meta.gps ? c.red(" 📍 GPS") : "";
+        console.log(
+          `${c.yellow("⚠")} ${relish(file)} ${c.dim(`(${format} is read-only — can't strip safely)`)}${gps}`,
+        );
+      } else if (!opts.quiet) {
+        console.log(`${c.green("✓")} ${relish(file)} ${c.dim(`— clean (${format})`)}`);
+      }
       continue;
     }
     const { data, bytesRemoved } = stripMetadata(bytes);
@@ -183,8 +199,12 @@ function runStrip(files: string[], opts: Options): number {
       `${c.green("✓")} ${relish(file)} → ${c.bold(relish(dest))} ${c.dim(`(removed ${fmtBytes(bytesRemoved)})`)}`,
     );
   }
+  const note =
+    skipped > 0
+      ? ` ${c.yellow(`(${skipped} read-only file(s) with metadata could not be stripped)`)}`
+      : "";
   console.log(
-    `\n${c.bold("Cleaned")} ${cleaned}/${files.length} image(s), removed ${fmtBytes(totalRemoved)} of metadata.`,
+    `\n${c.bold("Cleaned")} ${cleaned}/${files.length} image(s), removed ${fmtBytes(totalRemoved)} of metadata.${note}`,
   );
   return 0;
 }
@@ -210,7 +230,9 @@ ${c.bold("Examples")}
   scrubpix strip ./photos --in-place
   scrubpix strip vacation.png --out ./clean
 
-Paths can be files or directories (recursed). Only .jpg/.jpeg/.png/.webp are touched.
+Paths can be files or directories (recursed). Touches .jpg/.jpeg/.png/.webp/.heic.
+HEIC is read-only: scrubpix can reveal its metadata (incl. GPS) but won't rewrite
+it, since lossless HEIC stripping risks corrupting the image.
 Nothing is ever uploaded — all processing happens on your machine.`;
 
 async function main(): Promise<void> {

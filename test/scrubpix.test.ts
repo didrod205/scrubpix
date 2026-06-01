@@ -176,11 +176,93 @@ describe("WebP metadata", () => {
   });
 });
 
+// --- HEIC fixture (minimal ISOBMFF) ---
+// box: u32 size, 4cc type, payload.
+const box = (type: string, ...payload: Array<number[] | Uint8Array>): number[] => {
+  const body = payload.flatMap((p) => Array.from(p));
+  return [...u32be(body.length + 8), ...ascii(type), ...body];
+};
+
+/**
+ * Build a tiny but structurally-real HEIC: ftyp + meta{ iinf{ infe(Exif=1) },
+ * iloc(construction_method 1 → idat), idat[ exif payload ] }. The EXIF item is
+ * an `Exif\0\0`-style payload (4-byte tiff-offset + TIFF with Make="AB").
+ */
+function buildHeic(tiff: Uint8Array): Uint8Array {
+  const ftyp = box("ftyp", ascii("heic"), u32be(0), ascii("heicmif1"));
+
+  // infe v2: version(1)+flags(3), item_id(2), protection(2), "Exif"
+  const infe = box("infe", [2, 0, 0, 0], u16be(1), u16be(0), ascii("Exif"));
+  // iinf v0: version+flags(4), entry_count(2)=1, then infe boxes
+  const iinf = box("iinf", [0, 0, 0, 0], u16be(1), infe);
+
+  // exif item payload = 4-byte tiff header offset (0) + TIFF bytes
+  const exifPayload = flat(u32be(0), tiff);
+  const idat = box("idat", exifPayload);
+
+  // iloc v1, offset_size=4, length_size=4, base_offset_size=0:
+  //   version+flags(4), [offsetSize|lengthSize](1)=0x44, [baseOffset|index](1)=0,
+  //   item_count(2)=1, item_id(2)=1, construction_method(2)=1, data_ref(2)=0,
+  //   extent_count(2)=1, extent_offset(4)=0, extent_length(4)=payload length
+  const iloc = box(
+    "iloc",
+    [1, 0, 0, 0],
+    [0x44],
+    [0x00],
+    u16be(1),
+    u16be(1),
+    u16be(1), // construction_method = 1 (idat-relative)
+    u16be(0),
+    u16be(1),
+    u32be(0),
+    u32be(exifPayload.length),
+  );
+
+  // meta is a FullBox: version+flags(4) then child boxes.
+  const meta = box("meta", [0, 0, 0, 0], iinf, iloc, idat);
+  return flat(ftyp, meta);
+}
+
+const heicWithExif = buildHeic(makeTiff);
+const heicWithGps = buildHeic(gpsTiff);
+
+describe("HEIC metadata (read-only)", () => {
+  it("detects the HEIC format", () => {
+    expect(detectFormat(heicWithExif)).toBe("heic");
+  });
+
+  it("reads EXIF via the iloc/idat item location", () => {
+    const meta = readMetadata(heicWithExif);
+    expect(meta.hasMetadata).toBe(true);
+    expect(meta.fields.find((f) => f.name === "Make")?.value).toBe("AB");
+  });
+
+  it("decodes GPS from a HEIC EXIF item", () => {
+    const meta = readMetadata(heicWithGps);
+    expect(meta.gps).toEqual({ latitude: 37.5, longitude: 127 });
+  });
+
+  it("is read-only: canStrip is false and strip leaves bytes unchanged", () => {
+    const meta = readMetadata(heicWithExif);
+    expect(meta.canStrip).toBe(false);
+    const result = stripMetadata(heicWithExif);
+    expect(result.stripped).toBe(false);
+    expect(result.bytesRemoved).toBe(0);
+    expect(result.data.length).toBe(heicWithExif.length);
+  });
+});
+
 describe("edge cases", () => {
   it("returns unknown for truncated/garbage input without throwing", () => {
     expect(detectFormat(Uint8Array.from([0xff]))).toBe("unknown");
     expect(readMetadata(Uint8Array.from([1, 2, 3])).hasMetadata).toBe(false);
     expect(stripMetadata(Uint8Array.from([1, 2, 3])).bytesRemoved).toBe(0);
+  });
+
+  it("strippable formats report canStrip true and stripped true", () => {
+    const meta = readMetadata(jpegWithExif(makeTiff));
+    expect(meta.canStrip).toBe(true);
+    expect(stripMetadata(jpegWithExif(makeTiff)).stripped).toBe(true);
   });
 
   it("accepts ArrayBuffer input", () => {

@@ -106,7 +106,7 @@ const bytes = new Uint8Array(await file.arrayBuffer());
 
 // 1) See what's hidden
 const meta = readMetadata(bytes);
-meta.format;       // "jpeg" | "png" | "webp" | "unknown"
+meta.format;       // "jpeg" | "png" | "webp" | "heic" | "unknown"
 meta.gps;          // { latitude: 37.5, longitude: 127.0 }  ← if geotagged
 meta.fields;       // [{ name: "Make", value: "Apple", group: "image" }, ...]
 
@@ -140,17 +140,28 @@ const url = URL.createObjectURL(new Blob([data], { type: file.type }));
 | **JPEG** | EXIF (camera, lens, dates, **GPS**), XMP, IPTC, comments | All `APPn` (n≥1) + comment segments; image scan preserved |
 | **PNG** | `tEXt` / `zTXt` / `iTXt`, `tIME`, `eXIf` (incl. GPS) | All text/time/EXIF chunks; IHDR/IDAT/PLTE/IEND preserved |
 | **WebP** | `EXIF` (incl. GPS), `XMP` chunks | `EXIF`/`XMP` chunks; VP8/VP8L bitstream, `ICCP` profile & `VP8X` header preserved |
+| **HEIC** _(read-only)_ | EXIF (camera, dates, **GPS**), XMP — via the ISOBMFF `iloc`/`iinf` item table | _Not stripped — see note below_ |
+
+> **Why HEIC is read-only:** in HEIC the EXIF bytes live in `mdat`, referenced by
+> absolute offsets in the `iloc` box. Removing them means recomputing every
+> offset — one mistake corrupts the photo. scrubpix won't take that risk: it
+> **shows** you what an iPhone HEIC reveals (e.g. your GPS location) but won't
+> rewrite the file. `canStrip` is `false` and `stripMetadata` returns the bytes
+> unchanged (`stripped: false`). Convert to JPEG to strip.
 
 ## API
 
 | Function | Description |
 | -------- | ----------- |
-| `readMetadata(input)` | `{ format, hasMetadata, fields[], gps? }`. |
-| `stripMetadata(input)` | `{ data, format, bytesRemoved }` — cleaned bytes. |
-| `detectFormat(input)` | `"jpeg" \| "png" \| "webp" \| "unknown"`. |
+| `readMetadata(input)` | `{ format, hasMetadata, fields[], gps?, canStrip }`. |
+| `stripMetadata(input)` | `{ data, format, bytesRemoved, stripped }` — cleaned bytes. |
+| `detectFormat(input)` | `"jpeg" \| "png" \| "webp" \| "heic" \| "unknown"`. |
+| `canStrip(format)` | Whether scrubpix can losslessly strip this format (HEIC → `false`). |
 | `hasMetadata(input)` | Boolean shortcut. |
 
-`input` is a `Uint8Array` or `ArrayBuffer`.
+`input` is a `Uint8Array` or `ArrayBuffer`. Low-level helpers
+(`readJpeg`/`stripJpeg`, `readWebp`/`stripWebp`, `readHeic`, `parseTiff`, …) are
+also exported for advanced use.
 
 ## FAQ
 
@@ -168,7 +179,15 @@ strips. The web app even shows you the map pin first, so you can see what you're
 removing.
 
 **Which formats are supported?**
-JPEG, PNG and WebP today. HEIC and TIFF are on the roadmap — [open an issue](https://github.com/didrod205/scrubpix/issues) if you need them.
+JPEG, PNG and WebP are fully supported (read **and** lossless strip). **HEIC**
+(iPhone photos) is **read-only**: scrubpix detects and shows its metadata —
+including GPS — but won't rewrite the file (see the note above). Standalone TIFF
+is on the roadmap.
+
+**Can it remove GPS from my iPhone HEIC photo?**
+It will *show* you the GPS the HEIC embeds so you know it's there, but it won't
+strip it in place (that risks corrupting the file). The reliable fix today:
+convert the HEIC to JPEG, then `scrubpix strip` it.
 
 **Can it strip a whole folder?**
 Yes — `scrubpix strip ./photos -i` recurses a directory and cleans every image.

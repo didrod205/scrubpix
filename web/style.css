@@ -51,6 +51,7 @@ button:disabled { background: var(--border); color: var(--muted); cursor: defaul
 .maplink { display: block; color: var(--danger); text-decoration: none; font-weight: 600; margin-bottom: 0.6rem; font-family: ui-sans-serif, system-ui; }
 .maplink:hover { text-decoration: underline; }
 .clean { color: var(--muted); }
+.readonly-note { color: var(--muted); font-size: 0.85rem; margin-top: 0.6rem; line-height: 1.4; }
 
 footer { text-align: center; color: var(--muted); padding: 2rem 1rem 3rem; font-size: 0.85rem; }
 footer a { color: var(--accent); text-decoration: none; }
