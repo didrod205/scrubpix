@@ -53,7 +53,7 @@ async function handleFile(file: File): Promise<void> {
   } else if (meta.format !== "unknown") {
     metaEl.innerHTML = `<p class="clean">This image has no removable metadata. 🎉</p>`;
   } else {
-    metaEl.innerHTML = `<p class="clean">Only JPEG and PNG are supported.</p>`;
+    metaEl.innerHTML = `<p class="clean">Only JPEG, PNG and WebP are supported.</p>`;
   }
 
   const stripBtn = card.querySelector(".strip") as HTMLButtonElement;
@@ -77,9 +77,13 @@ async function handleFile(file: File): Promise<void> {
   results.prepend(card);
 }
 
+const SUPPORTED = new Set(["image/jpeg", "image/png", "image/webp"]);
+
 function handleFiles(files: FileList | File[]): void {
   for (const f of Array.from(files)) {
-    if (f.type === "image/jpeg" || f.type === "image/png") void handleFile(f);
+    // Fall back to extension sniffing when the browser doesn't set a type.
+    const ok = SUPPORTED.has(f.type) || /\.(jpe?g|png|webp)$/i.test(f.name);
+    if (ok) void handleFile(f);
   }
 }
 

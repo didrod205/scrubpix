@@ -8,6 +8,7 @@
 
 import { isJpeg, readJpeg, stripJpeg } from "./jpeg.js";
 import { isPng, readPng, stripPng } from "./png.js";
+import { isWebp, readWebp, stripWebp } from "./webp.js";
 import type { ImageFormat, Metadata, StripResult } from "./types.js";
 
 export type {
@@ -19,6 +20,12 @@ export type {
   StripResult,
 } from "./types.js";
 
+// Low-level per-format helpers, for advanced use.
+export { isJpeg, readJpeg, stripJpeg } from "./jpeg.js";
+export { isPng, readPng, stripPng } from "./png.js";
+export { isWebp, readWebp, stripWebp } from "./webp.js";
+export { parseTiff } from "./tiff.js";
+
 function toBytes(input: Uint8Array | ArrayBuffer): Uint8Array {
   return input instanceof Uint8Array ? input : new Uint8Array(input);
 }
@@ -28,6 +35,7 @@ export function detectFormat(input: Uint8Array | ArrayBuffer): ImageFormat {
   const b = toBytes(input);
   if (isJpeg(b)) return "jpeg";
   if (isPng(b)) return "png";
+  if (isWebp(b)) return "webp";
   return "unknown";
 }
 
@@ -43,7 +51,14 @@ export function detectFormat(input: Uint8Array | ArrayBuffer): ImageFormat {
 export function readMetadata(input: Uint8Array | ArrayBuffer): Metadata {
   const b = toBytes(input);
   const format = detectFormat(b);
-  const { fields, gps } = format === "jpeg" ? readJpeg(b) : format === "png" ? readPng(b) : { fields: [], gps: undefined };
+  const { fields, gps } =
+    format === "jpeg"
+      ? readJpeg(b)
+      : format === "png"
+        ? readPng(b)
+        : format === "webp"
+          ? readWebp(b)
+          : { fields: [], gps: undefined };
   return { format, hasMetadata: fields.length > 0, fields, gps };
 }
 
@@ -59,7 +74,14 @@ export function readMetadata(input: Uint8Array | ArrayBuffer): Metadata {
 export function stripMetadata(input: Uint8Array | ArrayBuffer): StripResult {
   const b = toBytes(input);
   const format = detectFormat(b);
-  const data = format === "jpeg" ? stripJpeg(b) : format === "png" ? stripPng(b) : b.slice();
+  const data =
+    format === "jpeg"
+      ? stripJpeg(b)
+      : format === "png"
+        ? stripPng(b)
+        : format === "webp"
+          ? stripWebp(b)
+          : b.slice();
   return { data, format, bytesRemoved: b.length - data.length };
 }
 

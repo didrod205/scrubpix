@@ -124,3 +124,68 @@ describe("PNG metadata", () => {
     expect(includes(data, ascii("IEND"))).toBe(true);
   });
 });
+
+// --- WebP fixtures (RIFF container) ---
+const webpChunk = (cc: string, data: number[]): number[] => {
+  const pad = data.length & 1 ? [0] : [];
+  return [...ascii(cc), ...u32le(data.length), ...data, ...pad];
+};
+function webp(...bodyChunks: number[][]): Uint8Array {
+  const body = bodyChunks.flat();
+  return flat(ascii("RIFF"), u32le(4 + body.length), ascii("WEBP"), body);
+}
+const webpWithExif = webp(
+  webpChunk("VP8X", [0x0c, 0, 0, 0, 0, 0, 0, 0, 0, 0]), // flags 0x0c = EXIF + XMP set
+  webpChunk("VP8 ", [0x11, 0x22, 0x33, 0x44]), // fake bitstream
+  webpChunk("EXIF", [...ascii("Exif"), 0, 0, ...Array.from(makeTiff)]),
+);
+const webpClean = webp(webpChunk("VP8 ", [0x11, 0x22, 0x33, 0x44]));
+
+describe("WebP metadata", () => {
+  it("detects the WebP format", () => {
+    expect(detectFormat(webpWithExif)).toBe("webp");
+  });
+
+  it("reads EXIF from an EXIF chunk", () => {
+    const meta = readMetadata(webpWithExif);
+    expect(meta.hasMetadata).toBe(true);
+    expect(meta.fields.find((f) => f.name === "Make")?.value).toBe("AB");
+  });
+
+  it("strips the EXIF chunk and clears VP8X flags, keeping the bitstream", () => {
+    const { data, bytesRemoved } = stripMetadata(webpWithExif);
+    expect(bytesRemoved).toBeGreaterThan(0);
+    expect(includes(data, ascii("EXIF"))).toBe(false);
+    expect(includes(data, ascii("VP8 "))).toBe(true);
+    expect(includes(data, [0x11, 0x22, 0x33, 0x44])).toBe(true);
+    expect(readMetadata(data).hasMetadata).toBe(false);
+    // VP8X flags byte (first chunk's data[0]) is cleared.
+    expect(data[20]).toBe(0);
+  });
+
+  it("leaves a clean WebP untouched", () => {
+    expect(readMetadata(webpClean).hasMetadata).toBe(false);
+    expect(stripMetadata(webpClean).bytesRemoved).toBe(0);
+  });
+
+  it("keeps the RIFF size header consistent after stripping", () => {
+    const { data } = stripMetadata(webpWithExif);
+    const dv = new DataView(data.buffer, data.byteOffset, data.byteLength);
+    const riffSize = dv.getUint32(4, true);
+    expect(riffSize).toBe(data.length - 8);
+  });
+});
+
+describe("edge cases", () => {
+  it("returns unknown for truncated/garbage input without throwing", () => {
+    expect(detectFormat(Uint8Array.from([0xff]))).toBe("unknown");
+    expect(readMetadata(Uint8Array.from([1, 2, 3])).hasMetadata).toBe(false);
+    expect(stripMetadata(Uint8Array.from([1, 2, 3])).bytesRemoved).toBe(0);
+  });
+
+  it("accepts ArrayBuffer input", () => {
+    const src = jpegWithExif(makeTiff);
+    const ab = src.buffer.slice(src.byteOffset, src.byteOffset + src.byteLength) as ArrayBuffer;
+    expect(detectFormat(ab)).toBe("jpeg");
+  });
+});

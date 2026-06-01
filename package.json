@@ -1,7 +1,7 @@
 {
   "name": "scrubpix",
-  "version": "0.1.0",
-  "description": "See and strip hidden image metadata — EXIF, GPS location, camera info, comments — losslessly and 100% locally. No re-encoding, no upload. Zero dependencies; works in the browser, Node, Deno and Bun.",
+  "version": "0.2.0",
+  "description": "See and strip hidden image metadata — EXIF, GPS location, camera info, comments — from JPEG, PNG & WebP, losslessly and 100% locally. CLI + library + web app. No re-encoding, no upload. Zero runtime dependencies; works in the browser, Node, Deno and Bun.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -12,6 +12,9 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     }
+  },
+  "bin": {
+    "scrubpix": "./dist/cli.js"
   },
   "files": [
     "dist"
@@ -41,8 +44,10 @@
     "image-metadata",
     "png",
     "jpeg",
+    "webp",
     "photo-privacy",
     "lossless",
+    "cli",
     "zero-dependency"
   ],
   "author": "didrod205 (https://github.com/didrod205)",
@@ -56,6 +61,7 @@
   },
   "homepage": "https://didrod205.github.io/scrubpix/",
   "devDependencies": {
+    "@types/node": "^22.19.19",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vite": "^6.0.0",

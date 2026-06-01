@@ -1,4 +1,4 @@
-export type ImageFormat = "jpeg" | "png" | "unknown";
+export type ImageFormat = "jpeg" | "png" | "webp" | "unknown";
 
 export type FieldGroup = "image" | "exif" | "gps" | "text";
 
