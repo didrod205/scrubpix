@@ -10,7 +10,7 @@
 [![types](https://img.shields.io/npm/types/scrubpix.svg)](https://www.npmjs.com/package/scrubpix)
 [![license](https://img.shields.io/npm/l/scrubpix.svg)](./LICENSE)
 
-**[🌐 Try the free web app →](https://didrod205.github.io/scrubpix/)** &nbsp;·&nbsp; drop a photo, see what it reveals, download a clean copy. Nothing uploaded.
+**[🌐 Try the free web app →](https://didrod205.github.io/scrubpix/)** &nbsp;·&nbsp; drop photos, see thumbnails + what they reveal, and strip them all to a **.zip** in one click. Nothing uploaded.
 
 </div>
 
@@ -191,7 +191,9 @@ convert the HEIC to JPEG, then `scrubpix strip` it.
 
 **Can it strip a whole folder?**
 Yes — `scrubpix strip ./photos -i` recurses a directory and cleans every image.
-The web app also handles multiple files at once.
+In the web app, drop multiple files and hit **"Strip all & download .zip"** to get
+every cleaned image back in one archive (the zip is built locally too — no
+dependency, no upload).
 
 ## Contributing
 

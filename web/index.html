@@ -26,7 +26,15 @@
         <p>
           <button id="pick" type="button">Choose photos</button>
         </p>
-        <p class="hint">…or drag &amp; drop, or paste (⌘/Ctrl+V). JPEG, PNG &amp; WebP. Multiple at once.</p>
+        <p class="hint">…or drag &amp; drop, or paste (⌘/Ctrl+V). JPEG, PNG, WebP &amp; HEIC. Multiple at once.</p>
+      </section>
+
+      <section id="toolbar" class="toolbar" hidden>
+        <span id="summary" class="summary"></span>
+        <span class="toolbar-actions">
+          <button id="strip-all" type="button">Strip all &amp; download .zip</button>
+          <button id="clear" type="button" class="ghost">Clear</button>
+        </span>
       </section>
 
       <section id="results" class="results" aria-live="polite"></section>
@@ -40,13 +48,16 @@
 
     <template id="card-tpl">
       <article class="card">
-        <div class="card-head">
-          <span class="name"></span>
-          <span class="badge"></span>
-        </div>
-        <div class="meta"></div>
-        <div class="actions">
-          <button class="strip" type="button">Strip &amp; download clean copy</button>
+        <img class="thumb" alt="" hidden />
+        <div class="card-body">
+          <div class="card-head">
+            <span class="name"></span>
+            <span class="badge"></span>
+          </div>
+          <div class="meta"></div>
+          <div class="actions">
+            <button class="strip" type="button">Strip &amp; download clean copy</button>
+          </div>
         </div>
       </article>
     </template>

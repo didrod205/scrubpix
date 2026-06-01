@@ -6,6 +6,13 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Web app:** image thumbnails on each result card, a session toolbar with a
+  summary, and a one-click **"Strip all & download .zip"** that cleans every
+  strippable image and packages them into a single archive — built locally with
+  a tiny dependency-free ZIP (store) writer. Plus a "Clear" action.
+
 ## [0.3.0]
 
 ### Added
