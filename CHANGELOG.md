@@ -6,12 +6,19 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.1]
+
 ### Added
 
 - **Web app:** image thumbnails on each result card, a session toolbar with a
   summary, and a one-click **"Strip all & download .zip"** that cleans every
   strippable image and packages them into a single archive — built locally with
   a tiny dependency-free ZIP (store) writer. Plus a "Clear" action.
+
+> Note: this release only changes the web app (and tests/docs). The published
+> npm package — the library + CLI in `dist/` — is byte-for-byte identical to
+> 0.3.0; the version bump just keeps the git tag, npm version and web deploy in
+> lockstep.
 
 ## [0.3.0]
 
@@ -73,7 +80,8 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   copies) deployed to GitHub Pages.
 - Zero runtime dependencies; ESM + CJS + TypeScript types.
 
-[Unreleased]: https://github.com/didrod205/scrubpix/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/didrod205/scrubpix/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/didrod205/scrubpix/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/didrod205/scrubpix/releases/tag/v0.3.0
 [0.2.0]: https://github.com/didrod205/scrubpix/releases/tag/v0.2.0
 [0.1.0]: https://github.com/didrod205/scrubpix/releases/tag/v0.1.0
